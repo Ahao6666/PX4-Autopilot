@@ -56,7 +56,7 @@ __EXPORT int px4_simple_app_main(int argc, char *argv[]);
 int px4_simple_app_main(int argc, char *argv[])
 {
 	PX4_INFO("Hello Sky!");
-	//X4_INFO("I changed it again");
+	//PX4_INFO("I changed it again");
 	/* subscribe to sensor_combined topic */
 	int sensor_sub_fd = orb_subscribe(ORB_ID(sensor_combined));
 	/* limit the update rate to 5 Hz */
