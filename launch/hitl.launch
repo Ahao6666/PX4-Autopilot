@@ -12,11 +12,14 @@
     <!-- vehicle model and world -->
     <arg name="est" default="ekf2"/>
     <arg name="vehicle" default="iris"/>
-    <arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
-    <arg name="sdf" default="$(find mavlink_sitl_gazebo)/models/$(arg vehicle)/$(arg vehicle).sdf"/>
+    <arg name="my_model" default="iris_asus_lidar"/>
+    <arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/cylinder_new_3.world"/>
+    <arg name="sdf" default="$(find mavlink_sitl_gazebo)/models/$(arg my_model)/$(arg my_model).sdf"/>
     <env name="PX4_SIM_MODEL" value="$(arg vehicle)" />
     <env name="PX4_ESTIMATOR" value="$(arg est)" />
-
+    <!-- MAVROS configs -->
+    <arg name="fcu_url" default="/dev/ttyUSB0:921600"/>
+    <arg name="respawn_mavros" default="false"/>
     <!-- gazebo configs -->
     <arg name="gui" default="true"/>
     <arg name="debug" default="false"/>
