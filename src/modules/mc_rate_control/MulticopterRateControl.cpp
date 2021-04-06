@@ -40,10 +40,11 @@
 //********ADRC*****
 #include <math.h>
 #include <stdbool.h>
+#include <time.h>
+//*************file system*********
 #include <iostream>
 #include <fstream>	// c++文件操作
 #include <iomanip> 	// 设置输出格式
-//*****************
 using namespace std;
 using namespace matrix;
 using namespace time_literals;
@@ -55,7 +56,7 @@ using math::radians;
 #define adrc_p 0.005f		//simulation step size
 bool b_EnableAtt_LADRC = 0;
 ofstream ofile;
-//ofstream out_txt_file("control_actuator.csv",ios::out || ios::app);
+
 
 //**********
 MulticopterRateControl::MulticopterRateControl(bool vtol) :
@@ -293,8 +294,13 @@ MulticopterRateControl::Run()
 			theta_ref = _rates_sp(1);
 			psi_ref = _rates_sp(2);
 
+			get_vehicle_status();
 			AttiRateADRC_Ctrl();
-			ofile << NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<< endl;
+			ofile << NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
+				<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<<","
+				<<att_q.q[0]<<","<<att_q.q[1]<<","<<att_q.q[2]<<","<<att_q.q[3]<<","
+				<<local_pos.x<<","<<local_pos.y<<","<<local_pos.z<<","
+				<<local_pos.vx<<","<<local_pos.vy<<","<<local_pos.vz<<","<<endl;
 			//******************************************
 
 			// publish rate controller status
@@ -964,10 +970,34 @@ void  AttiRateADRC_Ctrl(void)
 }
 
 void file_init(){
-	ofile.open("control_actuator.csv", ios::out | ios::app);	//default path is ~/.ros
+	char s[60];
+	struct tm tim;
+	time_t now = time(NULL);
+	tim = *(localtime(&now));
+	strftime(s,60,"control_quantity_%b_%d_%H_%M.csv",&tim);
+	string path =  string(s);
+
+	//std::ofstream ofile;
+	ofile.open(path.c_str(),ios::out | ios::app);
+
+	//ofile.open("control_actuator.csv", ios::out | ios::app);	//default path is ~/.ros
 	if(ofile)
 	{
 		warnx("file init!");
-		ofile << "roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<"\n";
+		ofile << "roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
+			<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<","
+			<<"att_q[0]"<<","<<"att_q[1]"<<","<<"att_q[2]"<<","<<"att_q[3]"<<","
+			<<"local_pos.x"<<","<<"local_pos.y"<<","<<"local_pos.z"<<","
+			<<"local_pos.vx"<<","<<"local_pos.vy"<<","<<"local_pos.vz"<<"\n";
 	}
+	vehicle_att_fd = orb_subscribe(ORB_ID(vehicle_attitude));
+	vehicle_local_pos_fd = orb_subscribe(ORB_ID(vehicle_local_position));
+
+}
+void get_vehicle_status(){
+	memset(&att_q, 0 , sizeof(att_q));
+	memset(&local_pos, 0 , sizeof(local_pos));
+	orb_copy(ORB_ID(vehicle_attitude), vehicle_att_fd, &att_q);
+	orb_copy(ORB_ID(vehicle_local_position),vehicle_local_pos_fd, &local_pos);
+
 }

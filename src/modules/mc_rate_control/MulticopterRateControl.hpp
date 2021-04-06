@@ -59,7 +59,11 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-
+//************UORB**************
+#include <uORB/uORB.h>
+#include <uORB/topics/vehicle_attitude.h>
+#include <uORB/topics/vehicle_local_position.h>
+//******************************
 class MulticopterRateControl : public ModuleBase<MulticopterRateControl>, public ModuleParams, public px4::WorkItem
 {
 public:
@@ -175,8 +179,13 @@ private:
 
 };
 
+//*************new parameter name***************
 float phi,theta,psi;
 float phi_ref,theta_ref,psi_ref;
+struct vehicle_attitude_s att_q;
+struct vehicle_local_position_s local_pos;
+int vehicle_att_fd;
+int vehicle_local_pos_fd;
 
 /*******LPF
 @parameters: t--1 order time constant
@@ -405,3 +414,4 @@ void ADRC_StopClear(void);
 float AMP_Limit(float, float, float);
 
 void file_init(void);
+void get_vehicle_status(void);
