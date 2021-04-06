@@ -37,21 +37,27 @@
 #include <circuit_breaker/circuit_breaker.h>
 #include <mathlib/math/Limits.hpp>
 #include <mathlib/math/Functions.hpp>
-
+//********ADRC*****
 #include <math.h>
 #include <stdbool.h>
-
-
+#include <iostream>
+#include <fstream>	// c++文件操作
+#include <iomanip> 	// 设置输出格式
+//*****************
+using namespace std;
 using namespace matrix;
 using namespace time_literals;
 using math::radians;
 
-
 #define SIGMA 0.000001f
-#define pi 3.1416
+//******adrc********
+#define pi 3.1416f
 #define adrc_p 0.005f		//simulation step size
 bool b_EnableAtt_LADRC = 0;
+ofstream ofile;
+//ofstream out_txt_file("control_actuator.csv",ios::out || ios::app);
 
+//**********
 MulticopterRateControl::MulticopterRateControl(bool vtol) :
 	ModuleParams(nullptr),
 	WorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl),
@@ -77,6 +83,7 @@ MulticopterRateControl::init()
 	}
 
 	ADRC_Init();
+	file_init();
 	return true;
 }
 
@@ -278,6 +285,7 @@ MulticopterRateControl::Run()
 			// run rate controller
 			const Vector3f att_control = _rate_control.update(rates, _rates_sp, angular_accel, dt, _maybe_landed || _landed);
 
+			//*************ADRC******************
 			phi = rates(0);
 			theta = rates(1);
 			psi = rates(2);
@@ -286,7 +294,8 @@ MulticopterRateControl::Run()
 			psi_ref = _rates_sp(2);
 
 			AttiRateADRC_Ctrl();
-			warnx("adrc_roll = %f, adrc_pitch = %f, adrc_yaw = %f", NLSEFState_Roll.u, NLSEFState_Pitch.u, NLSEFState_Yaw.u);
+			ofile << NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<< endl;
+			//******************************************
 
 			// publish rate controller status
 			rate_ctrl_status_s rate_ctrl_status{};
@@ -302,8 +311,6 @@ MulticopterRateControl::Run()
 			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_sp) ? _thrust_sp : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = (float)_landing_gear.landing_gear;
 			actuators.timestamp_sample = angular_velocity.timestamp_sample;
-
-			warnx("pid_roll = %f, pid_pitch = %f, pid_yaw = %f", att_control(0), att_control(1), att_control(2));
 
 			// scale effort by battery status if enabled
 			if (_param_mc_bat_scale_en.get()) {
@@ -954,4 +961,13 @@ void  AttiRateADRC_Ctrl(void)
 	}
 
 
+}
+
+void file_init(){
+	ofile.open("control_actuator.csv", ios::out | ios::app);	//default path is ~/.ros
+	if(ofile)
+	{
+		warnx("file init!");
+		ofile << "roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<"\n";
+	}
 }

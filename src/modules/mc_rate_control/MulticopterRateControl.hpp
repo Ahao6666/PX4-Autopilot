@@ -403,3 +403,5 @@ void FourthOrder_LSEF_Atti(TDState_TypeDef *tdstate,FourthOrder_LESOState_TypeDe
 void AttiRateADRC_Ctrl(void);
 void ADRC_StopClear(void);
 float AMP_Limit(float, float, float);
+
+void file_init(void);

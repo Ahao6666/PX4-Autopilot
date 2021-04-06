@@ -39,6 +39,12 @@
 #include <drivers/drv_hrt.h>
 #include <perf/perf_counter.h>
 
+#include <iostream>
+#include <fstream>	// c++文件操作
+#include <iomanip> 	// 设置输出格式
+using namespace std;
+extern ofstream ofile;
+
 namespace px4
 {
 namespace logger
