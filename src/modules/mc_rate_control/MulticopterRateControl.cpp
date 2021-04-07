@@ -283,8 +283,14 @@ MulticopterRateControl::Run()
 				}
 			}
 
-			// run rate controller
+			// run rate controller--------------const---------
 			const Vector3f att_control = _rate_control.update(rates, _rates_sp, angular_accel, dt, _maybe_landed || _landed);
+
+			// publish rate controller status
+			rate_ctrl_status_s rate_ctrl_status{};
+			_rate_control.getRateControlStatus(rate_ctrl_status);
+			rate_ctrl_status.timestamp = hrt_absolute_time();
+			_controller_status_pub.publish(rate_ctrl_status);
 
 			//*************ADRC******************
 			phi = rates(0);
@@ -298,22 +304,18 @@ MulticopterRateControl::Run()
 			AttiRateADRC_Ctrl();
 			ofile << NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
 				<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<<","
+				<<rate_ctrl_status.rollspeed_integ<<","<<rate_ctrl_status.pitchspeed_integ<<","<<rate_ctrl_status.yawspeed_integ<<","
 				<<att_q.q[0]<<","<<att_q.q[1]<<","<<att_q.q[2]<<","<<att_q.q[3]<<","
 				<<local_pos.x<<","<<local_pos.y<<","<<local_pos.z<<","
 				<<local_pos.vx<<","<<local_pos.vy<<","<<local_pos.vz<<","<<endl;
 			//******************************************
 
-			// publish rate controller status
-			rate_ctrl_status_s rate_ctrl_status{};
-			_rate_control.getRateControlStatus(rate_ctrl_status);
-			rate_ctrl_status.timestamp = hrt_absolute_time();
-			_controller_status_pub.publish(rate_ctrl_status);
 
-			// publish actuator controls
+			// instead the PID control law with ADRC
 			actuator_controls_s actuators{};
-			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)*10) ? att_control(0) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)*10) ? att_control(1) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)*10) ? att_control(2) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_sp) ? _thrust_sp : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = (float)_landing_gear.landing_gear;
 			actuators.timestamp_sample = angular_velocity.timestamp_sample;
@@ -986,6 +988,7 @@ void file_init(){
 		warnx("file init!");
 		ofile << "roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
 			<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<","
+			<<"rollspeed_integ"<<","<<"pitchspeed_integ"<<","<<"yawspeed_integ"<<","
 			<<"att_q[0]"<<","<<"att_q[1]"<<","<<"att_q[2]"<<","<<"att_q[3]"<<","
 			<<"local_pos.x"<<","<<"local_pos.y"<<","<<"local_pos.z"<<","
 			<<"local_pos.vx"<<","<<"local_pos.vy"<<","<<"local_pos.vz"<<"\n";

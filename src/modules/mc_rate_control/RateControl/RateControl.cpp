@@ -108,7 +108,7 @@ void RateControl::updateIntegral(Vector3f &rate_error, const float dt)
 
 void RateControl::getRateControlStatus(rate_ctrl_status_s &rate_ctrl_status)
 {
-	rate_ctrl_status.rollspeed_integ = _rate_int(0);
-	rate_ctrl_status.pitchspeed_integ = _rate_int(1);
-	rate_ctrl_status.yawspeed_integ = _rate_int(2);
+	rate_ctrl_status.rollspeed_integ = _rate_int(0)*10;
+	rate_ctrl_status.pitchspeed_integ = _rate_int(1)*10;
+	rate_ctrl_status.yawspeed_integ = _rate_int(2)*10;
 }
