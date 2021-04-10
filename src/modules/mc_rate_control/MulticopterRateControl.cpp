@@ -293,29 +293,32 @@ MulticopterRateControl::Run()
 			_controller_status_pub.publish(rate_ctrl_status);
 
 			//*************ADRC******************
-			phi = rates(0);
-			theta = rates(1);
-			psi = rates(2);
-			phi_ref = _rates_sp(0);
-			theta_ref = _rates_sp(1);
-			psi_ref = _rates_sp(2);
+			phi = rates(0) * 3.14 / 180;
+			theta = rates(1) * 3.14 / 180;
+			psi = rates(2) * 3.14 / 180;
+			phi_ref = _rates_sp(0) * 3.14 / 180;
+			theta_ref = _rates_sp(1) * 3.14 / 180;
+			psi_ref = _rates_sp(2) * 3.14 / 180;
 
 			get_vehicle_status();
 			AttiRateADRC_Ctrl();
+			float roll_control = AMP_Limit(NLSEFState_Roll.u * 0.05,-0.3,0.3);	//us
 			ofile << NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
 				<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<<","
-				<<rate_ctrl_status.rollspeed_integ<<","<<rate_ctrl_status.pitchspeed_integ<<","<<rate_ctrl_status.yawspeed_integ<<","
 				<<att_q.q[0]<<","<<att_q.q[1]<<","<<att_q.q[2]<<","<<att_q.q[3]<<","
 				<<local_pos.x<<","<<local_pos.y<<","<<local_pos.z<<","
-				<<local_pos.vx<<","<<local_pos.vy<<","<<local_pos.vz<<","<<endl;
+				<<local_pos.vx<<","<<local_pos.vy<<","<<local_pos.vz<<","<<roll_control<<endl;
 			//******************************************
 
 
 			// instead the PID control law with ADRC
 			actuator_controls_s actuators{};
-			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)*10) ? att_control(0) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)*10) ? att_control(1) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)*10) ? att_control(2) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(roll_control) ? roll_control : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
+			// actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
+			// actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
+			// actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_sp) ? _thrust_sp : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = (float)_landing_gear.landing_gear;
 			actuators.timestamp_sample = angular_velocity.timestamp_sample;
@@ -326,7 +329,7 @@ MulticopterRateControl::Run()
 					battery_status_s battery_status;
 
 					if (_battery_status_sub.copy(&battery_status)) {
-						_battery_status_scale = battery_status.scale;
+						_battery_status_scale = battery_status.scale;	//1.0 <= scale <= 1.3
 					}
 				}
 
@@ -961,13 +964,9 @@ void  AttiRateADRC_Ctrl(void)
 		NLSEFState_Yaw.u=0;
 	}
 
-	if(b_EnableAtt_LADRC)
-	{
-		LSEFState_Roll.u = AMP_Limit(LSEFState_Roll.u,-200,200);
-
-		LSEFState_Pitch.u = AMP_Limit(LSEFState_Pitch.u,-150,150);
-	}
-
+	// NLSEFState_Roll.u = AMP_Limit(NLSEFState_Roll.u,-200,200);	//us
+	// NLSEFState_Pitch.u = AMP_Limit(NLSEFState_Pitch.u,-150,150);	//us
+	// NLSEFState_Yaw.u = AMP_Limit(NLSEFState_Yaw.u,-150,150);	//us
 
 }
 
@@ -988,7 +987,6 @@ void file_init(){
 		warnx("file init!");
 		ofile << "roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
 			<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<","
-			<<"rollspeed_integ"<<","<<"pitchspeed_integ"<<","<<"yawspeed_integ"<<","
 			<<"att_q[0]"<<","<<"att_q[1]"<<","<<"att_q[2]"<<","<<"att_q[3]"<<","
 			<<"local_pos.x"<<","<<"local_pos.y"<<","<<"local_pos.z"<<","
 			<<"local_pos.vx"<<","<<"local_pos.vy"<<","<<"local_pos.vz"<<"\n";

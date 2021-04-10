@@ -63,6 +63,7 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_local_position.h>
+#include <lib/mixer_module/mixer_module.hpp>
 //******************************
 class MulticopterRateControl : public ModuleBase<MulticopterRateControl>, public ModuleParams, public px4::WorkItem
 {
@@ -179,13 +180,6 @@ private:
 
 };
 
-//*************new parameter name***************
-float phi,theta,psi;
-float phi_ref,theta_ref,psi_ref;
-struct vehicle_attitude_s att_q;
-struct vehicle_local_position_s local_pos;
-int vehicle_att_fd;
-int vehicle_local_pos_fd;
 
 /*******LPF
 @parameters: t--1 order time constant
@@ -415,3 +409,11 @@ float AMP_Limit(float, float, float);
 
 void file_init(void);
 void get_vehicle_status(void);
+
+//*************new parameter name***************
+float phi,theta,psi;
+float phi_ref,theta_ref,psi_ref;
+struct vehicle_attitude_s att_q;
+struct vehicle_local_position_s local_pos;
+int vehicle_att_fd;
+int vehicle_local_pos_fd;
