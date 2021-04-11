@@ -302,20 +302,23 @@ MulticopterRateControl::Run()
 
 			get_vehicle_status();
 			AttiRateADRC_Ctrl();
-			float roll_control = AMP_Limit(NLSEFState_Roll.u * 0.05,-0.3,0.3);	//us
+			float roll_control = AMP_Limit(NLSEFState_Roll.u * 0.01,-0.3,0.3);	//us
+			float pitch_control = AMP_Limit(NLSEFState_Pitch.u * 0.01,-0.3,0.3);	//us
+			float yaw_control = AMP_Limit(NLSEFState_Yaw.u * 0.01,-0.3,0.3);	//us
 			ofile << NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
 				<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<<","
+				<<roll_control<<","<<pitch_control<<","<<yaw_control<<","
 				<<att_q.q[0]<<","<<att_q.q[1]<<","<<att_q.q[2]<<","<<att_q.q[3]<<","
 				<<local_pos.x<<","<<local_pos.y<<","<<local_pos.z<<","
-				<<local_pos.vx<<","<<local_pos.vy<<","<<local_pos.vz<<","<<roll_control<<endl;
+				<<local_pos.vx<<","<<local_pos.vy<<","<<local_pos.vz<<","<<endl;
 			//******************************************
 
 
 			// instead the PID control law with ADRC
 			actuator_controls_s actuators{};
 			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(roll_control) ? roll_control : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(pitch_control) ? pitch_control : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(yaw_control) ? yaw_control : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
@@ -987,6 +990,7 @@ void file_init(){
 		warnx("file init!");
 		ofile << "roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
 			<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<","
+			<<"roll_control"<<","<<"pitch_control"<<","<<"yaw_control" <<","
 			<<"att_q[0]"<<","<<"att_q[1]"<<","<<"att_q[2]"<<","<<"att_q[3]"<<","
 			<<"local_pos.x"<<","<<"local_pos.y"<<","<<"local_pos.z"<<","
 			<<"local_pos.vx"<<","<<"local_pos.vy"<<","<<"local_pos.vz"<<"\n";
