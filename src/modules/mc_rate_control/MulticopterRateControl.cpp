@@ -305,7 +305,7 @@ MulticopterRateControl::Run()
 			float roll_control = AMP_Limit(NLSEFState_Roll.u * 0.01,-0.3,0.3);	//us
 			float pitch_control = AMP_Limit(NLSEFState_Pitch.u * 0.01,-0.3,0.3);	//us
 			float yaw_control = AMP_Limit(NLSEFState_Yaw.u * 0.01,-0.3,0.3);	//us
-			ofile << NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
+			ofile <<now<<","<<NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
 				<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<<","
 				<<roll_control<<","<<pitch_control<<","<<yaw_control<<","
 				<<att_q.q[0]<<","<<att_q.q[1]<<","<<att_q.q[2]<<","<<att_q.q[3]<<","
@@ -988,7 +988,7 @@ void file_init(){
 	if(ofile)
 	{
 		warnx("file init!");
-		ofile << "roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
+		ofile <<"time(us)"<<"roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
 			<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<","
 			<<"roll_control"<<","<<"pitch_control"<<","<<"yaw_control" <<","
 			<<"att_q[0]"<<","<<"att_q[1]"<<","<<"att_q[2]"<<","<<"att_q[3]"<<","
@@ -1004,5 +1004,4 @@ void get_vehicle_status(){
 	memset(&local_pos, 0 , sizeof(local_pos));
 	orb_copy(ORB_ID(vehicle_attitude), vehicle_att_fd, &att_q);
 	orb_copy(ORB_ID(vehicle_local_position),vehicle_local_pos_fd, &local_pos);
-
 }
