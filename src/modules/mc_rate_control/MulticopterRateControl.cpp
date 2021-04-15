@@ -988,7 +988,7 @@ void file_init(){
 	if(ofile)
 	{
 		warnx("file init!");
-		ofile <<"time(us)"<<"roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
+		ofile <<"time(us)"<<","<<"roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
 			<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<","
 			<<"roll_control"<<","<<"pitch_control"<<","<<"yaw_control" <<","
 			<<"att_q[0]"<<","<<"att_q[1]"<<","<<"att_q[2]"<<","<<"att_q[3]"<<","
