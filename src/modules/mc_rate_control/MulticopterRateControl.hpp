@@ -207,7 +207,7 @@ typedef struct _adrcpd
 
 /****** fal() function
 @parameters: a1--position coefficient
-			 a2--velocity coefficient
+		a2--velocity coefficient
 */
 typedef struct _fal
 {
@@ -411,8 +411,8 @@ void file_init(void);
 void get_vehicle_status(void);
 
 //*************new parameter name***************
-float phi,theta,psi;
-float phi_ref,theta_ref,psi_ref;
+float phi_rate,theta_rate,psi_rate;
+float phi_rate_ref,theta_rate_ref,psi_rate_ref;
 struct vehicle_attitude_s att_q;
 struct vehicle_local_position_s local_pos;
 int vehicle_att_fd;
