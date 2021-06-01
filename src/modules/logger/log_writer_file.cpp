@@ -506,8 +506,8 @@ void LogWriterFile::LogFileBuffer::close_file()
 		int res = close(_fd);
 		_fd = -1;
 
-		ofile.close();
-		PX4_WARN("file closed!");
+		// ofile.close();
+		// PX4_WARN("file closed!");
 
 		if (res) {
 			PX4_WARN("closing log file failed (%i)", errno);

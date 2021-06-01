@@ -407,8 +407,8 @@ void AttiRateADRC_Ctrl(void);
 void ADRC_StopClear(void);
 float AMP_Limit(float, float, float);
 
-void file_init(void);
-void get_vehicle_status(void);
+// void file_init(void);
+// void get_vehicle_status(void);
 
 //*************new parameter name***************
 float phi_rate,theta_rate,psi_rate;

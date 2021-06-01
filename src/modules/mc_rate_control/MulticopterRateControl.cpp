@@ -42,9 +42,9 @@
 #include <stdbool.h>
 #include <time.h>
 //*************file system*********
-#include <iostream>
-#include <fstream>	// c++文件操作
-#include <iomanip> 	// 设置输出格式
+// #include <iostream>
+// #include <fstream>	// c++文件操作
+// #include <iomanip> 	// 设置输出格式
 using namespace std;
 using namespace matrix;
 using namespace time_literals;
@@ -55,7 +55,7 @@ using math::radians;
 #define pi 3.1416f
 #define adrc_p 0.005f		//simulation step size
 bool b_EnableAtt_LADRC = 0;
-ofstream ofile;
+// ofstream ofile;
 
 
 //**********
@@ -84,7 +84,7 @@ MulticopterRateControl::init()
 	}
 
 	ADRC_Init();
-	file_init();
+	// file_init();
 	return true;
 }
 
@@ -301,24 +301,24 @@ MulticopterRateControl::Run()
 			psi_rate_ref = _rates_sp(2) * 3.14 / 180;
 
 			// get_vehicle_status();
-			AttiRateADRC_Ctrl();
-			float roll_rate_control = AMP_Limit(NLSEFState_Roll.u * 0.01,-0.3,0.3);	//us
-			float pitch_rate_control = AMP_Limit(NLSEFState_Pitch.u * 0.01,-0.3,0.3);	//us
-			float yaw_rate_control = AMP_Limit(NLSEFState_Yaw.u * 0.01,-0.3,0.3);	//us
-			ofile <<now<<","<<NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
-				<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<<","
-				<<roll_rate_control<<","<<pitch_rate_control<<","<<yaw_rate_control<<","
-				<<phi_rate_ref<<","<<TDState_RollRadio.x1<<","<<TDState_RollRadio.x2<<","
-				<<phi_rate<<","<<ESOState_Roll.z1<<","<<ESOState_Roll.z2<<","<<ESOState_Roll.z3<<","<<endl;
+			// AttiRateADRC_Ctrl();
+			// float roll_rate_control = AMP_Limit(NLSEFState_Roll.u * 0.01,-0.3,0.3);	//us
+			// float pitch_rate_control = AMP_Limit(NLSEFState_Pitch.u * 0.01,-0.3,0.3);	//us
+			// float yaw_rate_control = AMP_Limit(NLSEFState_Yaw.u * 0.01,-0.3,0.3);	//us
+			// ofile <<now<<","<<NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
+			// 	<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<<","
+			// 	<<roll_rate_control<<","<<pitch_rate_control<<","<<yaw_rate_control<<","
+			// 	<<phi_rate_ref<<","<<TDState_RollRadio.x1<<","<<TDState_RollRadio.x2<<","
+			// 	<<phi_rate<<","<<ESOState_Roll.z1<<","<<ESOState_Roll.z2<<","<<ESOState_Roll.z3<<","<<endl;
 			//******************************************
 
 
 			// instead the PID control law with ADRC
 			actuator_controls_s actuators{};
-			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(roll_rate_control) ? roll_rate_control : 0.0f;
+			// actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(roll_rate_control) ? roll_rate_control : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(pitch_rate_control) ? pitch_rate_control : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(yaw_rate_control) ? yaw_rate_control : 0.0f;
-			// actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_sp) ? _thrust_sp : 0.0f;
@@ -532,8 +532,8 @@ static void fal_Init(void)
 }
 static void fhan_Init(void)				//fhan_init()
 {
-	TD_fhanParas_RollRadio.c=5;
-	TD_fhanParas_RollRadio.r=pi;		//pi;
+	TD_fhanParas_RollRadio.c=10;
+	TD_fhanParas_RollRadio.r=12;		//pi;
 
 	TD_fhanParas_PitchRadio.c=10;
 	TD_fhanParas_PitchRadio.r=pi;
@@ -560,10 +560,10 @@ static void TD_Init(void)
 static void ESO_Init(void)
 {
 	ESOState_Roll.ch=1;
-	ESOParas_Roll.b1=300;		//200;
-	ESOParas_Roll.b2=2000;		//1767;
-	ESOParas_Roll.b3=13363;		//13420;
-	ESOParas_Roll.b=0.4936;		//0.2;
+	ESOParas_Roll.b1=211;		//200;
+	ESOParas_Roll.b2=1788;		//1767;
+	ESOParas_Roll.b3=12027;		//13420;
+	ESOParas_Roll.b=0.3;		//0.2;
 	ESOParas_Roll.c=20;
 	ESOState_Roll.z1=0;
 	ESOState_Roll.z2=0;
@@ -615,9 +615,9 @@ static void ESO_Init(void)
 static void NLSEF_Init(void)
 {
 	NLSEFState_Roll.ch=1;
-	NLSEFState_Roll.b1=150;		//120;
+	NLSEFState_Roll.b1=120;		//120;
 	NLSEFState_Roll.b2=120;		//120;
-	NLSEFState_Roll.b=0.6391;	//0.5;
+	NLSEFState_Roll.b=0.5;	//0.5;
 	NLSEFState_Roll.c=5;
 	NLSEFState_Roll.u=0;
 
@@ -969,7 +969,7 @@ void  AttiRateADRC_Ctrl(void)
 	// NLSEFState_Yaw.u = AMP_Limit(NLSEFState_Yaw.u,-150,150);	//us
 
 }
-
+/*
 void file_init(){
 	char s[60];
 	struct tm tim;
@@ -1000,3 +1000,4 @@ void get_vehicle_status(){
 	orb_copy(ORB_ID(vehicle_attitude), vehicle_att_fd, &att_q);
 	orb_copy(ORB_ID(vehicle_local_position),vehicle_local_pos_fd, &local_pos);
 }
+*/
