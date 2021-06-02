@@ -42,9 +42,9 @@
 #include <stdbool.h>
 #include <time.h>
 //*************file system*********
-// #include <iostream>
-// #include <fstream>	// c++文件操作
-// #include <iomanip> 	// 设置输出格式
+#include <iostream>
+#include <fstream>	// c++文件操作
+#include <iomanip> 	// 设置输出格式
 using namespace std;
 using namespace matrix;
 using namespace time_literals;
@@ -53,9 +53,7 @@ using math::radians;
 #define SIGMA 0.000001f
 //******adrc********
 #define pi 3.1416f
-#define adrc_p 0.005f		//simulation step size
-bool b_EnableAtt_LADRC = 0;
-// ofstream ofile;
+ofstream ofile;
 
 
 //**********
@@ -84,7 +82,7 @@ MulticopterRateControl::init()
 	}
 
 	ADRC_Init();
-	// file_init();
+	file_init();
 	return true;
 }
 
@@ -293,16 +291,9 @@ MulticopterRateControl::Run()
 			_controller_status_pub.publish(rate_ctrl_status);
 
 			//*************ADRC******************
-			phi_rate = rates(0) * 3.14 / 180;
-			theta_rate = rates(1) * 3.14 / 180;
-			psi_rate = rates(2) * 3.14 / 180;
-			phi_rate_ref = _rates_sp(0) * 3.14 / 180;
-			theta_rate_ref = _rates_sp(1) * 3.14 / 180;
-			psi_rate_ref = _rates_sp(2) * 3.14 / 180;
-
 			// get_vehicle_status();
-			// AttiRateADRC_Ctrl();
-			// float roll_rate_control = AMP_Limit(NLSEFState_Roll.u * 0.01,-0.3,0.3);	//us
+			double control_actuator_roll = AttiRateADRC_Ctrl(rates, _rates_sp, _maybe_landed || _landed);
+			float roll_rate_control = AMP_Limit( control_actuator_roll, -1.0, 1.0);	//us
 			// float pitch_rate_control = AMP_Limit(NLSEFState_Pitch.u * 0.01,-0.3,0.3);	//us
 			// float yaw_rate_control = AMP_Limit(NLSEFState_Yaw.u * 0.01,-0.3,0.3);	//us
 			// ofile <<now<<","<<NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
@@ -312,13 +303,12 @@ MulticopterRateControl::Run()
 			// 	<<phi_rate<<","<<ESOState_Roll.z1<<","<<ESOState_Roll.z2<<","<<ESOState_Roll.z3<<","<<endl;
 			//******************************************
 
-
 			// instead the PID control law with ADRC
 			actuator_controls_s actuators{};
-			// actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(roll_rate_control) ? roll_rate_control : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(roll_rate_control) ? roll_rate_control : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(pitch_rate_control) ? pitch_rate_control : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(yaw_rate_control) ? yaw_rate_control : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
+			// actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_sp) ? _thrust_sp : 0.0f;
@@ -423,190 +413,96 @@ extern "C" __EXPORT int mc_rate_control_main(int argc, char *argv[])
 	return MulticopterRateControl::main(argc, argv);
 }
 
-
-/* declaration */
-bool b_Enableladrc_test=0;
-extern bool b_EnableAtt_LADRC;
-
-
-/*	PD 	tsÊ±¼ä³£Êý£¬uÉÏÊ±¿ÌÖµ*/
-AdrcPD_TypeDef Roll_PD;
-AdrcPD_TypeDef Pitch_PD;
-AdrcPD_TypeDef Yaw_PD;
-
-/* newfal */
-newfal_TypeDef Att_newfal;
-newfal_TypeDef Rate_newfal;
-
-/* fal a1Î»ÖÃÖ¸Êý£¬a2ËÙ¶ÈÖ¸Êý*/
-fal_TypeDef ESO_fal;
-fal_TypeDef NLSEF_fal;
-
-/* TD rËÙ¶ÈÒò×Ó£¬Ò»°ãÎªÆÚÍûÊäÈëµÄ±³±¶Êý£¬cÂË²¨Òò×Ó*/
+//-------------------ADRC-------------
+/* TD parameters*/
 fhanParas_TypeDef TD_fhanParas_RollRadio;
 fhanParas_TypeDef TD_fhanParas_PitchRadio;
 fhanParas_TypeDef TD_fhanParas_YawRadio;
-/*x1¸ú×ÙµÄÁ¿£¬x2¸ú×ÙµÄËÙ¶ÈÁ¿*/
+
+/*TD states*/
 TDState_TypeDef TDState_RollRadio;
 TDState_TypeDef TDState_PitchRadio;
 TDState_TypeDef TDState_YawRadio;
 
-/* ESO À©ÕÅ×´Ì¬¹Û²âÆ÷£bb1¡¢b2¡¢b3 ¡ª¡ª ¹Û²âÆ÷ÔöÒæ,b ¡ª¡ª ¿ØÖÆÁ¿¶ÔÓ¦ÓÚ½Ç¼ÓËÙ¶ÈÁ¿µÄÔöÒæ,c ¡ª¡ª ÂË²¨Òò×Ó*/
+/* ESO parameters*/
 ESOParas_TypeDef ESOParas_Roll;
 ESOParas_TypeDef ESOParas_Pitch;
 ESOParas_TypeDef ESOParas_Yaw;
-/*z1¡¢z2¡¢z3 ¡ª¡ª ¹Û²âÆ÷¹Û²âµÄÎ»ÖÃ¡¢ËÙ¶È¡¢¼ÓËÙ¶ÈÁ¿*/
+
+/*ESO states*/
 ESOState_TypeDef ESOState_Roll;
 ESOState_TypeDef ESOState_Pitch;
 ESOState_TypeDef ESOState_Yaw;
 
-
-/* LESO */
-/*************************** ADRC ******************
-***@arthor:  YZN
-***@data:    18/6/21
-***@About:   LESO
-						 1. function
-								linear extend state observer
-
-
-***
-***
-***************************************************/
-/*wo ¡ª¡ª ¹Û²âÆ÷´ø¿í
-	b ¡ª¡ª ¿ØÖÆÁ¿¶ÔÓ¦ÓÚ½Ç¼ÓËÙ¶ÈÁ¿µÄÔöÒæ*/
-LESOParas_TypeDef LESOParas_Pitch;
-LESOParas_TypeDef LESOParas_Roll;
-//z1¡¢z2¡¢z3 ¡ª¡ª ¹Û²âÆ÷¹Û²âµÄÎ»ÖÃ¡¢ËÙ¶È¡¢¼ÓËÙ¶ÈÁ¿
-LESOState_TypeDef LESOState_Pitch;
-
-FourthOrder_LESOState_TypeDef FourthOrder_LESOState_Pitch;
-FourthOrder_LESOState_TypeDef FourthOrder_LESOState_Roll;
-
 /* NLSEF */
- /*				   b1 ¡ª¡ª Î»ÖÃÎó²î·´À¡ÔöÒæ
-						 b2 ¡ª¡ª ËÙ¶ÈÎó²î·´À¡ÔöÒæ
-						 b  ¡ª¡ª ¿ØÖÆÁ¿¶ÔÓ¦ÓÚ½Ç¼ÓËÙ¶ÈÁ¿µÄÔöÒæ
-						 c  ¡ª¡ª Æ«²îÔöÒæ
-						 a1 ¡ª¡ª ±ÈÀý·´À¡fal£¨£©Ö¸Êý²ÎÊý
-						 a2 ¡ª¡ª Î¢·Ö·´À¡fal£¨£©Ö¸Êý²ÎÊý
-						 u  ¡ª¡ª Êä³öµÄ¿ØÖÆÁ¿
-*/
 NLSEFState_TypeDef NLSEFState_Roll;
 NLSEFState_TypeDef NLSEFState_Pitch;
 NLSEFState_TypeDef NLSEFState_Yaw;
 
-/* LSEF
-						 b  ¡ª¡ª ¿ØÖÆÁ¿¶ÔÓ¦ÓÚ½Ç¼ÓËÙ¶ÈÁ¿µÄÔöÒæ
-						 wc ¡ª¡ª ¿ØÖÆÆ÷´ø¿í
-						 u  ¡ª¡ª Êä³öµÄ¿ØÖÆÁ¿
-*/
-
-LSEFState_TypeDef LSEFState_Roll;
-LSEFState_TypeDef LSEFState_Pitch;
-LSEFState_TypeDef LSEFState_Yaw;
-
-
-static void ADRCPD_Init(void)
+static void fhan_Init(void)
 {
+	TD_fhanParas_RollRadio.h=0.005;
+	TD_fhanParas_RollRadio.r=50;
 
-	Roll_PD.Ts=0.0667f;//0.0667
-	Roll_PD.u=0;
+	TD_fhanParas_PitchRadio.h=0.005;
+	TD_fhanParas_PitchRadio.r=50;
 
-	Pitch_PD.Ts=0.0667f;//0.0667
-	Pitch_PD.u=0;
-
-	Yaw_PD.Ts=0.0667f;//0.0667
-	Yaw_PD.u=0;
-}
-
-
-static void fal_Init(void)
-{
-	ESO_fal.a1=0.5;
-	ESO_fal.a2=0.75;   //0.25
-
-	NLSEF_fal.a1=0.5;	//0.75
-	NLSEF_fal.a2=1.25;
-
-}
-static void fhan_Init(void)				//fhan_init()
-{
-	TD_fhanParas_RollRadio.c=10;
-	TD_fhanParas_RollRadio.r=12;		//pi;
-
-	TD_fhanParas_PitchRadio.c=10;
-	TD_fhanParas_PitchRadio.r=pi;
-
-	TD_fhanParas_YawRadio.c=10;
-	TD_fhanParas_YawRadio.r=pi;
+	TD_fhanParas_YawRadio.h=0.005;
+	TD_fhanParas_YawRadio.r=50;
 }
 
 static void TD_Init(void)
 {
-	TDState_RollRadio.ch=1;
+	TDState_RollRadio.h=0.005;
 	TDState_RollRadio.x1=0;
 	TDState_RollRadio.x2=0;
 
-	TDState_PitchRadio.ch=2;
+	TDState_PitchRadio.h=0.005;
 	TDState_PitchRadio.x1=0;
 	TDState_PitchRadio.x2=0;
 
-	TDState_YawRadio.ch=3;
+	TDState_YawRadio.h=0.005;
 	TDState_YawRadio.x1=0;
 	TDState_YawRadio.x2=0;
 }
 
 static void ESO_Init(void)
 {
-	ESOState_Roll.ch=1;
-	ESOParas_Roll.b1=211;		//200;
-	ESOParas_Roll.b2=1788;		//1767;
-	ESOParas_Roll.b3=12027;		//13420;
-	ESOParas_Roll.b=0.3;		//0.2;
-	ESOParas_Roll.c=20;
-	ESOState_Roll.z1=0;
-	ESOState_Roll.z2=0;
-	ESOState_Roll.z3=0;
+	ESOParas_Roll.h = 0.005;
+	ESOParas_Roll.b = 7;
+	ESOParas_Roll.b1 = 50;
+	ESOParas_Roll.b2 = 150;
+	ESOParas_Roll.b3 = 800;
+	ESOParas_Roll.a1 = 0.7;
+	ESOParas_Roll.a2 = 0.1;
+	ESOParas_Roll.d = 0.05;
 
-	ESOState_Pitch.ch=2;
-	ESOParas_Pitch.b1=200;
-	ESOParas_Pitch.b2=1767;
-	ESOParas_Pitch.b3=13420;
-	ESOParas_Pitch.b=0.2;
-	ESOParas_Pitch.c=20;
+	ESOState_Roll.z1 = 0;
+	ESOState_Roll.z2 = 0;
+	ESOState_Roll.z3 = 0;
+
+	ESOParas_Pitch.h=0.005;
+	ESOParas_Pitch.b=7;
+	ESOParas_Pitch.b1=50;
+	ESOParas_Pitch.b2=150;
+	ESOParas_Pitch.b3=800;
+	ESOParas_Pitch.a1=0.7;
+	ESOParas_Pitch.a2=0.1;
+	ESOParas_Pitch.d=0.05;
+
 	ESOState_Pitch.z1=0;
 	ESOState_Pitch.z2=0;
 	ESOState_Pitch.z3=0;
 
-	LESOParas_Pitch.b=2.0;
-	LESOParas_Pitch.wo=60.00;
-	LESOState_Pitch.ch=2;
-	LESOState_Pitch.z1=0;
-	LESOState_Pitch.z2=0;
-	LESOState_Pitch.z3=0;
+	ESOParas_Yaw.h=0.005;
+	ESOParas_Yaw.b=7;
+	ESOParas_Yaw.b1=50;
+	ESOParas_Yaw.b2=150;
+	ESOParas_Yaw.b3=800;
+	ESOParas_Yaw.a1=0.7;
+	ESOParas_Yaw.a2=0.1;
+	ESOParas_Yaw.d=0.05;
 
-	LESOParas_Roll.b=3;
-	LESOParas_Roll.wo=60;
-
-	FourthOrder_LESOState_Pitch.ch=2;
-	FourthOrder_LESOState_Pitch.z1=0;
-	FourthOrder_LESOState_Pitch.z2=0;
-	FourthOrder_LESOState_Pitch.z3=0;
-	FourthOrder_LESOState_Pitch.z4=0;
-
-	FourthOrder_LESOState_Roll.ch=1;
-	FourthOrder_LESOState_Roll.z1=0;
-	FourthOrder_LESOState_Roll.z2=0;
-	FourthOrder_LESOState_Roll.z3=0;
-	FourthOrder_LESOState_Roll.z4=0;
-
-	ESOState_Yaw.ch=3;
-	ESOParas_Yaw.b1=200;
-	ESOParas_Yaw.b2=1767;
-	ESOParas_Yaw.b3=13420;
-	ESOParas_Yaw.b=0.02;
-	ESOParas_Yaw.c=20;
 	ESOState_Yaw.z1=0;
 	ESOState_Yaw.z2=0;
 	ESOState_Yaw.z3=0;
@@ -614,55 +510,37 @@ static void ESO_Init(void)
 
 static void NLSEF_Init(void)
 {
-	NLSEFState_Roll.ch=1;
-	NLSEFState_Roll.b1=120;		//120;
-	NLSEFState_Roll.b2=120;		//120;
-	NLSEFState_Roll.b=0.5;	//0.5;
-	NLSEFState_Roll.c=5;
+	NLSEFState_Roll.b1=5;		//120;
+	NLSEFState_Roll.b2=2.5;		//120;
+	NLSEFState_Roll.b=7;	//0.5;
+	NLSEFState_Roll.a1=0.6;
+	NLSEFState_Roll.a2=0.9;
+	NLSEFState_Roll.d=0.02;
 	NLSEFState_Roll.u=0;
 
-	NLSEFState_Pitch.ch=2;
-	NLSEFState_Pitch.b1=120;
-	NLSEFState_Pitch.b2=120;
-	NLSEFState_Pitch.b=0.5; //b=100
-	NLSEFState_Pitch.c=5;
+	NLSEFState_Pitch.b1=5;
+	NLSEFState_Pitch.b2=2.5;
+	NLSEFState_Pitch.b=7;
+	NLSEFState_Pitch.a1=0.6;
+	NLSEFState_Pitch.a2=0.9;
+	NLSEFState_Pitch.d=0.02;
 	NLSEFState_Pitch.u=0;
 
-	NLSEFState_Yaw.ch=3;
-	NLSEFState_Yaw.b1=180;
-	NLSEFState_Yaw.b2=140;
-	NLSEFState_Yaw.b=0.05;
-	NLSEFState_Yaw.c=5;
+	NLSEFState_Yaw.b1=5;
+	NLSEFState_Yaw.b2=2.5;
+	NLSEFState_Yaw.b=7;
+	NLSEFState_Yaw.a1=0.6;
+	NLSEFState_Yaw.a2=0.9;
+	NLSEFState_Yaw.d=0.02;
 	NLSEFState_Yaw.u=0;
-}
-
-static void LSEF_Init(void)
-{
-	LSEFState_Roll.ch=1;
-	LSEFState_Roll.b=3;
-	LSEFState_Roll.wc=5.0;
-	LSEFState_Roll.u=0;
-
-	LSEFState_Pitch.ch=2;
-	LSEFState_Pitch.b=2;
-	LSEFState_Pitch.wc=7.0;
-	LSEFState_Pitch.u=0;
-
-	LSEFState_Yaw.ch=3;
-	LSEFState_Yaw.b=0.05;
-	LSEFState_Yaw.wc=5;
-	LSEFState_Yaw.u=0;
 }
 
 void ADRC_Init(void)
 {
-	fal_Init();
-	ADRCPD_Init();
 	fhan_Init();
 	TD_Init();
 	ESO_Init();//
 	NLSEF_Init();
-	LSEF_Init();
 	warnx("ADRC Init!");
 }
 
@@ -676,306 +554,143 @@ float AMP_Limit(float in, float low, float up)
 	return in;
 }
 
-void ADRC_LPF(float u,AdrcLPF_TypeDef *para)
-{
-	para->x1=(para->k*adrc_p*u+para->t*para->x2)/(adrc_p+para->t);
-	para->x2=para->x1;
-
-}
-float ADRC_PD(float input,AdrcPD_TypeDef *para)
-{
-	float value;
-	value=para->Ts*(input-para->u)/adrc_p;
-	value=AMP_Limit(value,-50,50);//
-	value+=input;
-	para->u=input;
-	return value;
-}
 /* ------------------------- TD -------------------------------*/
 static float fhan(float x1,float x2,fhanParas_TypeDef *para)
 {
-	float h,d,d0,y,a0,r,a;
+	float h, d, d0, y, a0, r, a;
 	float res;
-	r=para->r;
-	h=para->c*adrc_p;
-	d=r*h;
-	d0=h*d;
+	r = para->r;
+	h = para->h;
+	d = r * h;
+	d0 = h * d;
 
-	y=x1+h*x2;
-	a0=sqrt(d*d+8*r*fabs(y));
+	y = x1 + h * x2;
+	a0 = sqrt(d*d + 8 * r * fabs(y));
 
-
-	if(fabs(y)>d0)
+	if (fabs(y) > d0)
 	{
-		if(y>=0.0f)
-			a=x2+(a0-d)/2;
+		if (y >= 0.0f)
+			a = x2 + (a0 - d) / 2;
 		else
-			a=x2-(a0-d)/2;
+			a = x2 - (a0 - d) / 2;
 	}
 	else
-		a=x2+y/h;
+		a = x2 + y / h;
 
-	if(fabs(a)>d)
+	if (fabs(a) > d)
 	{
-		if(a>0)
-			res=-r;
+		if (a > 0)
+			res = -r;
 		else
-			res=r;
+			res = r;
 	}
 	else
-		res=-r*a/d;
+		res = -r * a / d;
 
 	return res;
 }
 
 void TD_Atti(TDState_TypeDef *state,float v,fhanParas_TypeDef *para)
 {
-	float fh,e;
-	float x1,x2;
-	x1=state->x1;
-	x2=state->x2;
-	e=x1-v;
-	fh=fhan(e,x2,para);
-	state->x1=x1+x2*adrc_p;
-	state->x2=x2+fh*adrc_p;
+	float fh;
+	float x1, x2;
+	x1 = state->x1;
+	x2 = state->x2;
+	fh = fhan(x1 - v, x2, para);
+	state->x1 = x1 + x2 * state->h;
+	state->x2 = x2 + fh * state->h;
 }
 
 
 /*------------------------  ESO ----------------------------------*/
-
-static float fal(float e,float a,float s,float m)
-{
-	float abs_value,res;
-	abs_value=fabs(e);
-	if(abs_value>m)
-	{
-		if(e>0)
-			res=pow(abs_value,a);
-		else
-			res=-pow(abs_value,a);
-	}
-	else
-		res=e/s;
-	return res;
-}
-
 void ESO_Atti(const double y,const double u,ESOParas_TypeDef *para,ESOState_TypeDef *state)
 {
-	double e,fe,fe1,m;//adrc
-	double z1,z2,z3;
+	double e, fe, fe1;
+	double z1, z2, z3;
 
+	z1 = state->z1;
+	z2 = state->z2;
+	z3 = state->z3;
 
-	m=adrc_p*para->c;
-	ESO_fal.s1=powf(m,1-ESO_fal.a1);
-	ESO_fal.s2=powf(m,1-ESO_fal.a2);
-
-	z1=state->z1;
-	z2=state->z2;
-	z3=state->z3;
-
-
-
-	e=(double)state->z1-y;
-	fe=fal(e,ESO_fal.a1,ESO_fal.s1,m);
-	fe1=fal(e,ESO_fal.a2,ESO_fal.s2,m);
-	state->z1=z1+(z2-para->b1*e)*adrc_p;
-	state->z2=z2+(z3-para->b2*fe+para->b*u)*adrc_p;
-	state->z3=z3-para->b3*fe1*adrc_p;
-
-}
-
-
-void LESO_Atti(const int init,const double y,double u,LESOParas_TypeDef *para,LESOState_TypeDef *state)
-{
-	double e;//adrc_p
-	double b1,b2,b3;
-	double z1,z2,z3;
-	int count;
-
-	count=init;
-
-	if(count==1)
-	{
-		z1=y;
-		z2=0;
-		z3=0;
-		u=0;
+	e = state->z1 - y;
+	if (abs(e) > para->d) {
+		fe = pow(abs(e), para->a1) * sign(e);
+		fe1 = pow(abs(e), para->a2) * sign(e);
 	}
-	else
-	{
-			z1=state->z1;
-		  z2=state->z2;
-	  	z3=state->z3;
+	else {
+		fe = e / pow(para->d, (1 - para->a1));
+		fe1 = e / pow(para->d, (1 - para->a2));
 	}
 
-	b1=3*para->wo;
-	b2=3*para->wo*para->wo;
-	b3=para->wo*para->wo*para->wo;
-
-	e=state->z1-y;
-	state->z1=z1+(z2-b1*e)*adrc_p;
-  	state->z2=z2+(z3-b2*e+para->b*u)*adrc_p;
-	state->z3=z3-b3*e*adrc_p;
-
-}
-
-
-void FourthOrder_LESO_Atti(const int init,const double y,double u,LESOParas_TypeDef *para,FourthOrder_LESOState_TypeDef *state)
-{
-	double e;//adrc_p
-	double b1,b2,b3,b4;
-	double z1,z2,z3,z4;
-	int count;
-
-	count=init;
-
-	if(count==1)
-	{
-		z1=y;
-		z2=0;
-		z3=0;
-		z4=0;
-		u=0;
-	}
-	else
-	{
-		z1=state->z1;
-		z2=state->z2;
-	  	z3=state->z3;
-		z4=state->z4;
-	}
-
-	b1=4*para->wo;
-	b2=6*para->wo*para->wo;
-	b3=4*para->wo*para->wo*para->wo;
-	b4=para->wo*para->wo*para->wo*para->wo;
-
-	e=state->z1-y;
-	state->z1=z1+(z2-b1*e)*adrc_p;
-  	state->z2=z2+(z3-b2*e)*adrc_p;
-	state->z3=z3+(z4-b3*e+para->b*u)*adrc_p;//-z3/0.667
-	state->z4=z4-b4*e*adrc_p;
+	state->z1 = z1 + (z2 - para->b1 * e) * para->h;
+	state->z2 = z2 + (z3 - para->b2 * fe + para->b * u) * para->h;
+	state->z3 = z3 - para->b3 * fe1 * para->h;
 }
 
 //----------------------NLSEF--------------------
 void NLSEF_Atti(TDState_TypeDef *tdstate,ESOState_TypeDef *esostate,NLSEFState_TypeDef *nlsefstate)
 {
 
-	float e1,e2,u1,u2;
-	float m;
+	float e1, e2, u1, u2;
+	e1 = tdstate->x1 - esostate->z1;
+	e2 = tdstate->x2 - esostate->z2;
+	if (abs(e1) > nlsefstate->d)
+		u1 = pow(abs(e1), nlsefstate->a1) * sign(e1);
+	else
+		u1 = e1 / pow(nlsefstate->d, 1 - nlsefstate->a1);
 
-
-	m=adrc_p*nlsefstate->c;
-	NLSEF_fal.s1=pow(m,1-NLSEF_fal.a1);
-	NLSEF_fal.s2=pow(m,1-NLSEF_fal.a2);
-
-
-	e1=tdstate->x1-esostate->z1;
-	e2=tdstate->x2-esostate->z2;
-
-
-	u1=fal(e1,NLSEF_fal.a1,NLSEF_fal.s1,m);
-	u2=fal(e2,NLSEF_fal.a2,NLSEF_fal.s2,m);
-
-
-	nlsefstate->u=nlsefstate->b1*u1+nlsefstate->b2*u2-esostate->z3/nlsefstate->b;
-
-
+	if (abs(e2) > nlsefstate->d)
+		u2 = pow(abs(e2), nlsefstate->a2) * sign(e2);
+	else
+		u2 = e2 / pow(nlsefstate->d, 1 - nlsefstate->a2);
+	nlsefstate->u = nlsefstate->b1 * u1 + nlsefstate->b2 * u2 - esostate->z3 / nlsefstate->b;
 }
 
-
-void LSEF_Atti(TDState_TypeDef *tdstate,LESOState_TypeDef *lesostate,LSEFState_TypeDef *lsefstate)
+double AttiRateADRC_Ctrl(matrix::Vector3f rate_v, matrix::Vector3f _rates_sp_v, const bool landed)
 {
+	hrt_abstime now1 = hrt_absolute_time();
+	float phi_rate_ref = 0;
 
-	float e1,e2;
+	float phi_rate = rate_v(0);
+	// theta_rate = rate_v(1);
+	// psi_rate = rate_v(2) * 3.14 / 180;
 
-	e1=tdstate->x1-lesostate->z1;
-	e2=lesostate->z2;
-
-	lsefstate->u=(lsefstate->wc*lsefstate->wc*e1-2*lsefstate->wc*e2-lesostate->z3)/lsefstate->b;
-
-}
-
-void FourthOrder_LSEF_Atti(TDState_TypeDef *tdstate,FourthOrder_LESOState_TypeDef *lesostate,LSEFState_TypeDef *lsefstate)
-{
-
-	float e1,e2,e3;
-
-	e1=tdstate->x1-lesostate->z1;
-	e2=lesostate->z2;
-	e3=lesostate->z3;
-
-	lsefstate->u=(lsefstate->wc*lsefstate->wc*lsefstate->wc*e1-3*lsefstate->wc*lsefstate->wc*e2-3*lsefstate->wc*e3-lesostate->z4)/lsefstate->b;//+lesostate->z3/0.667
-
-}
-
-
-void  AttiRateADRC_Ctrl(void)
-{
-	static int Roll_count=0;
-	static int Pitch_count=0;
-
+	if (!landed) {
+		phi_rate_ref = _rates_sp_v(0);
+		// theta_rate_ref = _rates_sp_v(1) * 3.14 / 180;
+		// psi_rate_ref = _rates_sp_v(2) * 3.14 / 180;
+	}
 	/* Roll Channel */
 	TD_Atti(&TDState_RollRadio,phi_rate_ref,&TD_fhanParas_RollRadio);
+	ESO_Atti(phi_rate,NLSEFState_Roll.u,&ESOParas_Roll,&ESOState_Roll);
+	NLSEF_Atti(&TDState_RollRadio,&ESOState_Roll,&NLSEFState_Roll);
 
-	if(b_EnableAtt_LADRC)//LADRC
-	{
-		Roll_count++;
-		FourthOrder_LESO_Atti(Roll_count,phi_rate,LSEFState_Roll.u,&LESOParas_Roll,&FourthOrder_LESOState_Roll);
-		FourthOrder_LSEF_Atti(&TDState_RollRadio,&FourthOrder_LESOState_Roll,&LSEFState_Roll);
-	}
-	else
-	{
-		Roll_count=0;
-		ESO_Atti(phi_rate,NLSEFState_Roll.u,&ESOParas_Roll,&ESOState_Roll);
-		NLSEF_Atti(&TDState_RollRadio,&ESOState_Roll,&NLSEFState_Roll);
-	}
+	ofile <<now1<<","<<phi_rate<<","<<phi_rate_ref<<","<<NLSEFState_Roll.u<<endl;
+	return (double)NLSEFState_Roll.u / 500;
 
 	/* Pitch Channel*/
-	TD_Atti(&TDState_PitchRadio,theta_rate_ref,&TD_fhanParas_PitchRadio);
+	// TD_Atti(&TDState_PitchRadio,theta_rate_ref,&TD_fhanParas_PitchRadio);
+	// ESO_Atti(theta_rate,NLSEFState_Pitch.u,&ESOParas_Pitch,&ESOState_Pitch);
+	// NLSEF_Atti(&TDState_PitchRadio,&ESOState_Pitch,&NLSEFState_Pitch);
 
-	if(b_EnableAtt_LADRC)// || b_Enableladrc_test
-	{
-		Pitch_count++;
-		FourthOrder_LESO_Atti(Pitch_count,theta_rate,LSEFState_Pitch.u,&LESOParas_Pitch,&FourthOrder_LESOState_Pitch);
-		FourthOrder_LSEF_Atti(&TDState_PitchRadio,&FourthOrder_LESOState_Pitch,&LSEFState_Pitch);
-	}
-	else
-	{
-		Pitch_count=0;
-		ESO_Atti(theta_rate,NLSEFState_Pitch.u,&ESOParas_Pitch,&ESOState_Pitch);
-		NLSEF_Atti(&TDState_PitchRadio,&ESOState_Pitch,&NLSEFState_Pitch);
-	}
-
-	if(true)	//(!b_EnableDirectPSI)
-	{
-			/* Yaw Channel */
-		TD_Atti(&TDState_YawRadio,psi_rate_ref,&TD_fhanParas_YawRadio);
-		ESO_Atti(psi_rate,NLSEFState_Yaw.u,&ESOParas_Yaw,&ESOState_Yaw);
-		NLSEF_Atti(&TDState_YawRadio,&ESOState_Yaw,&NLSEFState_Yaw);
-	}
-	else
-	{
-		TDState_YawRadio.x1=psi_rate;
-		TDState_YawRadio.x2=0;
-		ESOState_Yaw.z1=psi_rate;
-		ESOState_Yaw.z2=0;
-		ESOState_Yaw.z3=0;
-		NLSEFState_Yaw.u=0;
-	}
+	/* Yaw Channel */
+	// TD_Atti(&TDState_YawRadio,psi_rate_ref,&TD_fhanParas_YawRadio);
+	// ESO_Atti(psi_rate,NLSEFState_Yaw.u,&ESOParas_Yaw,&ESOState_Yaw);
+	// NLSEF_Atti(&TDState_YawRadio,&ESOState_Yaw,&NLSEFState_Yaw);
 
 	// NLSEFState_Roll.u = AMP_Limit(NLSEFState_Roll.u,-200,200);	//us
 	// NLSEFState_Pitch.u = AMP_Limit(NLSEFState_Pitch.u,-150,150);	//us
 	// NLSEFState_Yaw.u = AMP_Limit(NLSEFState_Yaw.u,-150,150);	//us
 
 }
-/*
+
 void file_init(){
 	char s[60];
 	struct tm tim;
 	time_t now = time(NULL);
 	tim = *(localtime(&now));
-	strftime(s,60,"control_quantity_%b_%d_%H_%M.csv",&tim);
+	// strftime(s,60,"control_quantity_%b_%d_%H_%M.csv",&tim);
+	strftime(s,60,"adrc_roll_%b_%d_%H_%M.csv",&tim);
 	string path =  string(s);
 
 	ofile.open(path.c_str(),ios::out | ios::app);
@@ -984,16 +699,17 @@ void file_init(){
 	if(ofile)
 	{
 		warnx("file init!");
-		ofile <<"time(us)"<<","<<"roll_adrc"<<","<<"pitch_adrc"<<","<<"yaw_adrc"<<","
-			<<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<","
-			<<"roll_rate_control"<<","<<"pitch_rate_control"<<","<<"yaw_rate_control" <<","
-			<<"roll_rate_ref"<<","<<"TD_x1"<<","<<"TD_x2"<<","
-			<<"roll_rate"<<","<<"ESO_Z1"<<","<<"ESO_Z2"<<","<<"ESO_Z3"<<"\n";
+		ofile <<"time(us)"<<","<<"phi_rate"<<","<<"phi_rate_ref"<<","<<"adrc.u"<<endl;
+			// <<"roll_pid"<<","<<"pitch_pid"<<","<<"yaw_pid" <<","
+			// <<"roll_rate_control"<<","<<"pitch_rate_control"<<","<<"yaw_rate_control" <<","
+			// <<"roll_rate_ref"<<","<<"TD_x1"<<","<<"TD_x2"<<","
+			// <<"roll_rate"<<","<<"ESO_Z1"<<","<<"ESO_Z2"<<","<<"ESO_Z3"<<"\n";
 	}
 	vehicle_att_fd = orb_subscribe(ORB_ID(vehicle_attitude));
 	vehicle_local_pos_fd = orb_subscribe(ORB_ID(vehicle_local_position));
 
 }
+/*
 void get_vehicle_status(){
 	memset(&att_q, 0 , sizeof(att_q));
 	memset(&local_pos, 0 , sizeof(local_pos));

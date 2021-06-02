@@ -181,48 +181,6 @@ private:
 };
 
 
-/*******LPF
-@parameters: t--1 order time constant
-			 k--gain
-			 x1--current value
-			 x2--previous value
-*/
-typedef struct _adrclpf
-{
-	float t;
-	float k;
-	float x1;
-	float x2;
-}AdrcLPF_TypeDef;
-
-/*******PD
-@parameters: Ts--time constant
-			 u--last time value
-*/
-typedef struct _adrcpd
-{
-	float Ts;
-	float u;
-}AdrcPD_TypeDef;
-
-/****** fal() function
-@parameters: a1--position coefficient
-		a2--velocity coefficient
-*/
-typedef struct _fal
-{
-	float a1;
-	float a2;
-	float s1;
-	float s2;
-}fal_TypeDef;
-
-typedef struct _newfal
-{
-	float a;
-	float c;
-}newfal_TypeDef;
-
 /*****	 fhan	 ******
 @parameters: r--velocity coefficient
 			 c--filter coefficient
@@ -230,7 +188,7 @@ typedef struct _newfal
 typedef struct _fhanparas
 {
 	float r;
-	float c;
+	float h;
 }fhanParas_TypeDef;
 
 
@@ -240,7 +198,7 @@ typedef struct _fhanparas
 */
 typedef struct _tdstate
 {
-	unsigned int ch;
+	float h;
 	float x1;
 	float x2;
 }TDState_TypeDef;
@@ -255,11 +213,14 @@ typedef struct _tdstate
 */
 typedef struct _esoparas
 {
+	float h;
+	float b;
 	float b1;
 	float b2;
 	float b3;
-	float b;
-	float c;
+	float a1;
+	float a2;
+	float d;
 }ESOParas_TypeDef;
 
 /******  ESOState  ******
@@ -274,94 +235,21 @@ typedef struct _esostate
 	float z3;
 }ESOState_TypeDef;
 
-
-
-
-/******  LESOPara  ******
-@parameters: wo--observer bandwidth
-			 b--gain
-@author YZN
-@date 2017 9 6
-*/
-typedef struct _lesoparas
-{
-	float wo;
-	float b;
-}LESOParas_TypeDef;
-
-
-/******  LESOState  ******
-@parameters: z1,z2,z3--position velocity acceleration observed from observer
-@author YZN
-@date 2017 9 6
-*/
-typedef struct _lesostate
-{
-	unsigned int ch;
-	float z1;
-	float z2;
-	float z3;
-}LESOState_TypeDef;
-
-//4 order LESO
-typedef struct _fourthorder_lesostate
-{
-	unsigned int ch;
-	float z1;
-	float z2;
-	float z3;
-	float z4;
-}FourthOrder_LESOState_TypeDef;
-
-
-/******  NLSEF  ******
-@parameters: b1--gain of position error feedback
-			b2--gain of velocity error feedback
-			b
-			c
-			a1
-			a2
-			u
-*/
 typedef struct _nlsefpara
 {
-	unsigned int ch;
 	float b1;
 	float b2;
 	float b;
-	float c;
+	float a1;
+	float a2;
+	float d;
 	float u;
 }NLSEFState_TypeDef;
 
-/******  LSEF  ******
-@author YZN
-@date 2018 6 21
-@parameters:
-			b
-			wc
-			u
-*/
-typedef struct _lsefpara
-{
-	unsigned int ch;
-	float b;
-	float wc;
-	float u;
-}LSEFState_TypeDef;
-
-
-/* PD */
-
-extern AdrcPD_TypeDef Roll_PD;
-extern AdrcPD_TypeDef Pitch_PD;
-extern AdrcPD_TypeDef Yaw_PD;
-
 /* TD */
-
 extern fhanParas_TypeDef TD_fhanParas_RollRadio;
 extern fhanParas_TypeDef TD_fhanParas_PitchRadio;
 extern fhanParas_TypeDef TD_fhanParas_YawRadio;
-
 
 extern TDState_TypeDef TDState_RollRadio;
 extern TDState_TypeDef TDState_PitchRadio;
@@ -371,14 +259,10 @@ extern TDState_TypeDef TDState_YawRadio;
 
 extern ESOParas_TypeDef ESOParas_Roll;
 extern ESOParas_TypeDef ESOParas_Pitch;
-extern LESOParas_TypeDef LESOParas_Pitch;
 extern ESOParas_TypeDef ESOParas_Yaw;
 
 extern ESOState_TypeDef ESOState_Roll;
 extern ESOState_TypeDef ESOState_Pitch;
-extern LESOState_TypeDef LESOState_Pitch;
-extern FourthOrder_LESOState_TypeDef FourthOrder_LESOState_Pitch;
-
 extern ESOState_TypeDef ESOState_Yaw;
 
 /* NLSEF */
@@ -386,33 +270,17 @@ extern NLSEFState_TypeDef NLSEFState_Roll;
 extern NLSEFState_TypeDef NLSEFState_Pitch;
 extern NLSEFState_TypeDef NLSEFState_Yaw;
 
-/* LSEF */
-extern LSEFState_TypeDef LSEFState_Roll;
-extern LSEFState_TypeDef LSEFState_Pitch;
-extern LSEFState_TypeDef LSEFState_Yaw;
-
 void ADRC_Init(void);
-void ADRC_LPF(float u,AdrcLPF_TypeDef *para);
-float ADRC_PD(float u,AdrcPD_TypeDef *para);
 void TD_Atti(TDState_TypeDef *state,float v,fhanParas_TypeDef *para);
 void ESO_Atti(const double y,const double u,ESOParas_TypeDef *para,ESOState_TypeDef *state);
-void LESO_Atti(const int init,const double y,double u,LESOParas_TypeDef *para,LESOState_TypeDef *state);
-void FourthOrder_LESO_Atti(const int init,const double y,double u,LESOParas_TypeDef *para,FourthOrder_LESOState_TypeDef *state);
-//void LESO_Atti(const double y,const double u,LESOParas_TypeDef *para,LESOState_TypeDef *state);
 void NLSEF_Atti(TDState_TypeDef *tdstate,ESOState_TypeDef *esostate,NLSEFState_TypeDef *nlsefstate);
-//void LSEF_Atti(TDState_TypeDef *tdstate,LESOState_TypeDef *lesostate,NLSEFState_TypeDef *nlsefstate);
-void LSEF_Atti(TDState_TypeDef *tdstate,LESOState_TypeDef *lesostate,LSEFState_TypeDef *lsefstate);
-void FourthOrder_LSEF_Atti(TDState_TypeDef *tdstate,FourthOrder_LESOState_TypeDef *lesostate,LSEFState_TypeDef *lsefstate);
-void AttiRateADRC_Ctrl(void);
-void ADRC_StopClear(void);
-float AMP_Limit(float, float, float);
+double AttiRateADRC_Ctrl(matrix::Vector3f, matrix::Vector3f,const bool landed);
 
-// void file_init(void);
+float AMP_Limit(float in, float low, float up);
+void file_init(void);
 // void get_vehicle_status(void);
 
 //*************new parameter name***************
-float phi_rate,theta_rate,psi_rate;
-float phi_rate_ref,theta_rate_ref,psi_rate_ref;
 struct vehicle_attitude_s att_q;
 struct vehicle_local_position_s local_pos;
 int vehicle_att_fd;
