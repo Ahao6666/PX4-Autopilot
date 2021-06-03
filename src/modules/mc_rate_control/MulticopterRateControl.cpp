@@ -53,7 +53,7 @@ using math::radians;
 #define SIGMA 0.000001f
 //******adrc********
 #define pi 3.1416f
-ofstream ofile;
+// ofstream ofile;
 
 
 //**********
@@ -82,7 +82,7 @@ MulticopterRateControl::init()
 	}
 
 	ADRC_Init();
-	file_init();
+	// file_init();
 	return true;
 }
 
@@ -292,9 +292,9 @@ MulticopterRateControl::Run()
 
 			//*************ADRC******************
 			// get_vehicle_status();
-			double control_actuator_roll = AttiRateADRC_Ctrl(rates, _rates_sp, _maybe_landed || _landed);
-			float roll_rate_control = AMP_Limit( control_actuator_roll, -1.0, 1.0);	//us
-			// float pitch_rate_control = AMP_Limit(NLSEFState_Pitch.u * 0.01,-0.3,0.3);	//us
+			Vector3f att_rate_input = AttiRateADRC_Ctrl(rates, _rates_sp, _maybe_landed || _landed);
+			float roll_rate_control = AMP_Limit( att_rate_input(0), -1.0, 1.0);
+			float pitch_rate_control = AMP_Limit(att_rate_input(1), -1.0, 1.0);	//us
 			// float yaw_rate_control = AMP_Limit(NLSEFState_Yaw.u * 0.01,-0.3,0.3);	//us
 			// ofile <<now<<","<<NLSEFState_Roll.u<<","<<NLSEFState_Pitch.u<<","<<NLSEFState_Yaw.u<<","
 			// 	<<att_control(0)<<","<<att_control(1)<<","<<att_control(2)<<","
@@ -306,10 +306,10 @@ MulticopterRateControl::Run()
 			// instead the PID control law with ADRC
 			actuator_controls_s actuators{};
 			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(roll_rate_control) ? roll_rate_control : 0.0f;
-			// actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(pitch_rate_control) ? pitch_rate_control : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(pitch_rate_control) ? pitch_rate_control : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(yaw_rate_control) ? yaw_rate_control : 0.0f;
 			// actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
+			// actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_sp) ? _thrust_sp : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = (float)_landing_gear.landing_gear;
@@ -442,13 +442,11 @@ NLSEFState_TypeDef NLSEFState_Yaw;
 static void fhan_Init(void)
 {
 	TD_fhanParas_RollRadio.h=0.005;
-	TD_fhanParas_RollRadio.r=50;
+	TD_fhanParas_RollRadio.r = 150;
 
 	TD_fhanParas_PitchRadio.h=0.005;
-	TD_fhanParas_PitchRadio.r=50;
+	TD_fhanParas_PitchRadio.r = 150;
 
-	TD_fhanParas_YawRadio.h=0.005;
-	TD_fhanParas_YawRadio.r=50;
 }
 
 static void TD_Init(void)
@@ -460,79 +458,54 @@ static void TD_Init(void)
 	TDState_PitchRadio.h=0.005;
 	TDState_PitchRadio.x1=0;
 	TDState_PitchRadio.x2=0;
-
-	TDState_YawRadio.h=0.005;
-	TDState_YawRadio.x1=0;
-	TDState_YawRadio.x2=0;
 }
 
 static void ESO_Init(void)
 {
 	ESOParas_Roll.h = 0.005;
-	ESOParas_Roll.b = 7;
-	ESOParas_Roll.b1 = 50;
-	ESOParas_Roll.b2 = 150;
-	ESOParas_Roll.b3 = 800;
+	ESOParas_Roll.b = 6.1;		//10
+	ESOParas_Roll.b1 = 17.7;
+	ESOParas_Roll.b2 = 374;
+	ESOParas_Roll.b3 = 1500;
 	ESOParas_Roll.a1 = 0.7;
-	ESOParas_Roll.a2 = 0.1;
-	ESOParas_Roll.d = 0.05;
+	ESOParas_Roll.a2 = 0.1;		//0.1
+	ESOParas_Roll.d = 0.1;		//0.05
 
 	ESOState_Roll.z1 = 0;
 	ESOState_Roll.z2 = 0;
 	ESOState_Roll.z3 = 0;
 
-	ESOParas_Pitch.h=0.005;
-	ESOParas_Pitch.b=7;
-	ESOParas_Pitch.b1=50;
-	ESOParas_Pitch.b2=150;
-	ESOParas_Pitch.b3=800;
-	ESOParas_Pitch.a1=0.7;
-	ESOParas_Pitch.a2=0.1;
-	ESOParas_Pitch.d=0.05;
+	ESOParas_Pitch.h = 0.005;
+	ESOParas_Pitch.b = 6.1;		//10
+	ESOParas_Pitch.b1 = 17.7;
+	ESOParas_Pitch.b2 = 374;
+	ESOParas_Pitch.b3 = 1500;
+	ESOParas_Pitch.a1 = 0.7;
+	ESOParas_Pitch.a2 = 0.1;		//0.1
+	ESOParas_Pitch.d = 0.1;		//0.05
 
-	ESOState_Pitch.z1=0;
-	ESOState_Pitch.z2=0;
-	ESOState_Pitch.z3=0;
-
-	ESOParas_Yaw.h=0.005;
-	ESOParas_Yaw.b=7;
-	ESOParas_Yaw.b1=50;
-	ESOParas_Yaw.b2=150;
-	ESOParas_Yaw.b3=800;
-	ESOParas_Yaw.a1=0.7;
-	ESOParas_Yaw.a2=0.1;
-	ESOParas_Yaw.d=0.05;
-
-	ESOState_Yaw.z1=0;
-	ESOState_Yaw.z2=0;
-	ESOState_Yaw.z3=0;
+	ESOState_Pitch.z1 = 0;
+	ESOState_Pitch.z2 = 0;
+	ESOState_Pitch.z3 = 0;
 }
 
 static void NLSEF_Init(void)
 {
-	NLSEFState_Roll.b1=5;		//120;
-	NLSEFState_Roll.b2=2.5;		//120;
-	NLSEFState_Roll.b=7;	//0.5;
-	NLSEFState_Roll.a1=0.6;
-	NLSEFState_Roll.a2=0.9;
-	NLSEFState_Roll.d=0.02;
-	NLSEFState_Roll.u=0;
+	NLSEFState_Roll.b1 = 30;		//17.6
+	NLSEFState_Roll.b2 = 10;		//10;
+	NLSEFState_Roll.b = 6.1;			//10
+	NLSEFState_Roll.a1 = 0.6;
+	NLSEFState_Roll.a2 = 1.5;		//0.9
+	NLSEFState_Roll.d = 0.1;			//0.02
+	NLSEFState_Roll.u = 0;
 
-	NLSEFState_Pitch.b1=5;
-	NLSEFState_Pitch.b2=2.5;
-	NLSEFState_Pitch.b=7;
-	NLSEFState_Pitch.a1=0.6;
-	NLSEFState_Pitch.a2=0.9;
-	NLSEFState_Pitch.d=0.02;
-	NLSEFState_Pitch.u=0;
-
-	NLSEFState_Yaw.b1=5;
-	NLSEFState_Yaw.b2=2.5;
-	NLSEFState_Yaw.b=7;
-	NLSEFState_Yaw.a1=0.6;
-	NLSEFState_Yaw.a2=0.9;
-	NLSEFState_Yaw.d=0.02;
-	NLSEFState_Yaw.u=0;
+	NLSEFState_Pitch.b1 = 30;		//17.6
+	NLSEFState_Pitch.b2 = 10;		//10;
+	NLSEFState_Pitch.b = 6.1;			//10
+	NLSEFState_Pitch.a1 = 0.6;
+	NLSEFState_Pitch.a2 = 1.5;		//0.9
+	NLSEFState_Pitch.d = 0.1;			//0.02
+	NLSEFState_Pitch.u = 0;
 }
 
 void ADRC_Init(void)
@@ -646,44 +619,43 @@ void NLSEF_Atti(TDState_TypeDef *tdstate,ESOState_TypeDef *esostate,NLSEFState_T
 	nlsefstate->u = nlsefstate->b1 * u1 + nlsefstate->b2 * u2 - esostate->z3 / nlsefstate->b;
 }
 
-double AttiRateADRC_Ctrl(matrix::Vector3f rate_v, matrix::Vector3f _rates_sp_v, const bool landed)
+Vector3f AttiRateADRC_Ctrl(matrix::Vector3f rate_v, matrix::Vector3f _rates_sp_v, const bool landed)
 {
-	hrt_abstime now1 = hrt_absolute_time();
-	float phi_rate_ref = 0;
+	Vector3f att_rate_control;
+	float phi_rate_ref = _rates_sp_v(0);
+	float theta_rate_ref = _rates_sp_v(1);
+	// float psi_rate_ref = _rates_sp_v(2);
 
 	float phi_rate = rate_v(0);
-	// theta_rate = rate_v(1);
-	// psi_rate = rate_v(2) * 3.14 / 180;
+	float theta_rate = rate_v(1);
+	// float psi_rate = rate_v(2);
 
-	if (!landed) {
-		phi_rate_ref = _rates_sp_v(0);
-		// theta_rate_ref = _rates_sp_v(1) * 3.14 / 180;
-		// psi_rate_ref = _rates_sp_v(2) * 3.14 / 180;
+	if (landed) {
+		phi_rate_ref = phi_rate;
+		theta_rate_ref = theta_rate;
+		// psi_rate_ref = psi_rate;
 	}
 	/* Roll Channel */
 	TD_Atti(&TDState_RollRadio,phi_rate_ref,&TD_fhanParas_RollRadio);
 	ESO_Atti(phi_rate,NLSEFState_Roll.u,&ESOParas_Roll,&ESOState_Roll);
 	NLSEF_Atti(&TDState_RollRadio,&ESOState_Roll,&NLSEFState_Roll);
-
-	ofile <<now1<<","<<phi_rate<<","<<phi_rate_ref<<","<<NLSEFState_Roll.u<<endl;
-	return (double)NLSEFState_Roll.u / 500;
+	att_rate_control(0) = (double)NLSEFState_Roll.u / 500;
 
 	/* Pitch Channel*/
-	// TD_Atti(&TDState_PitchRadio,theta_rate_ref,&TD_fhanParas_PitchRadio);
-	// ESO_Atti(theta_rate,NLSEFState_Pitch.u,&ESOParas_Pitch,&ESOState_Pitch);
-	// NLSEF_Atti(&TDState_PitchRadio,&ESOState_Pitch,&NLSEFState_Pitch);
+	TD_Atti(&TDState_PitchRadio,theta_rate_ref,&TD_fhanParas_PitchRadio);
+	ESO_Atti(theta_rate,NLSEFState_Pitch.u,&ESOParas_Pitch,&ESOState_Pitch);
+	NLSEF_Atti(&TDState_PitchRadio,&ESOState_Pitch,&NLSEFState_Pitch);
+	att_rate_control(1) = (double)NLSEFState_Pitch.u / 500;
 
 	/* Yaw Channel */
 	// TD_Atti(&TDState_YawRadio,psi_rate_ref,&TD_fhanParas_YawRadio);
 	// ESO_Atti(psi_rate,NLSEFState_Yaw.u,&ESOParas_Yaw,&ESOState_Yaw);
 	// NLSEF_Atti(&TDState_YawRadio,&ESOState_Yaw,&NLSEFState_Yaw);
+	att_rate_control(2) = (double)NLSEFState_Yaw.u / 500;
 
-	// NLSEFState_Roll.u = AMP_Limit(NLSEFState_Roll.u,-200,200);	//us
-	// NLSEFState_Pitch.u = AMP_Limit(NLSEFState_Pitch.u,-150,150);	//us
-	// NLSEFState_Yaw.u = AMP_Limit(NLSEFState_Yaw.u,-150,150);	//us
-
+	return att_rate_control;
 }
-
+/*
 void file_init(){
 	char s[60];
 	struct tm tim;
@@ -709,7 +681,7 @@ void file_init(){
 	vehicle_local_pos_fd = orb_subscribe(ORB_ID(vehicle_local_position));
 
 }
-/*
+
 void get_vehicle_status(){
 	memset(&att_q, 0 , sizeof(att_q));
 	memset(&local_pos, 0 , sizeof(local_pos));

@@ -274,7 +274,7 @@ void ADRC_Init(void);
 void TD_Atti(TDState_TypeDef *state,float v,fhanParas_TypeDef *para);
 void ESO_Atti(const double y,const double u,ESOParas_TypeDef *para,ESOState_TypeDef *state);
 void NLSEF_Atti(TDState_TypeDef *tdstate,ESOState_TypeDef *esostate,NLSEFState_TypeDef *nlsefstate);
-double AttiRateADRC_Ctrl(matrix::Vector3f, matrix::Vector3f,const bool landed);
+matrix::Vector3f AttiRateADRC_Ctrl(matrix::Vector3f, matrix::Vector3f,const bool landed);
 
 float AMP_Limit(float in, float low, float up);
 void file_init(void);
