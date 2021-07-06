@@ -277,7 +277,7 @@ void NLSEF_Atti(TDState_TypeDef *tdstate,ESOState_TypeDef *esostate,NLSEFState_T
 matrix::Vector3f AttiRateADRC_Ctrl(matrix::Vector3f, matrix::Vector3f,const bool landed);
 
 float AMP_Limit(float in, float low, float up);
-void file_init(void);
+// void file_init(void);
 // void get_vehicle_status(void);
 
 //*************new parameter name***************

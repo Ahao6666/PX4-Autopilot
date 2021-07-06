@@ -42,9 +42,9 @@
 #include <stdbool.h>
 #include <time.h>
 //*************file system*********
-#include <iostream>
-#include <fstream>	// c++文件操作
-#include <iomanip> 	// 设置输出格式
+// #include <iostream>
+// #include <fstream>	// c++文件操作
+// #include <iomanip> 	// 设置输出格式
 using namespace std;
 using namespace matrix;
 using namespace time_literals;
@@ -442,10 +442,10 @@ NLSEFState_TypeDef NLSEFState_Yaw;
 static void fhan_Init(void)
 {
 	TD_fhanParas_RollRadio.h=0.005;
-	TD_fhanParas_RollRadio.r = 150;
+	TD_fhanParas_RollRadio.r = 500;
 
 	TD_fhanParas_PitchRadio.h=0.005;
-	TD_fhanParas_PitchRadio.r = 150;
+	TD_fhanParas_PitchRadio.r = 500;
 
 }
 
@@ -463,26 +463,26 @@ static void TD_Init(void)
 static void ESO_Init(void)
 {
 	ESOParas_Roll.h = 0.005;
-	ESOParas_Roll.b = 6.1;		//10
-	ESOParas_Roll.b1 = 17.7;
-	ESOParas_Roll.b2 = 374;
-	ESOParas_Roll.b3 = 1500;
-	ESOParas_Roll.a1 = 0.7;
-	ESOParas_Roll.a2 = 0.1;		//0.1
-	ESOParas_Roll.d = 0.1;		//0.05
+	ESOParas_Roll.b = 0.1;		//0.1/1/10
+	ESOParas_Roll.b1 = 10;		//10/200
+	ESOParas_Roll.b2 = 400;		//374/15000
+	ESOParas_Roll.b3 = 1500;	//1500/250000
+	ESOParas_Roll.a1 = 0.5;
+	ESOParas_Roll.a2 = 0.25;
+	ESOParas_Roll.d = 0.01;
 
 	ESOState_Roll.z1 = 0;
 	ESOState_Roll.z2 = 0;
 	ESOState_Roll.z3 = 0;
 
 	ESOParas_Pitch.h = 0.005;
-	ESOParas_Pitch.b = 6.1;		//10
-	ESOParas_Pitch.b1 = 17.7;
-	ESOParas_Pitch.b2 = 374;
+	ESOParas_Pitch.b = 0.1;
+	ESOParas_Pitch.b1 = 10;
+	ESOParas_Pitch.b2 = 400;
 	ESOParas_Pitch.b3 = 1500;
-	ESOParas_Pitch.a1 = 0.7;
-	ESOParas_Pitch.a2 = 0.1;		//0.1
-	ESOParas_Pitch.d = 0.1;		//0.05
+	ESOParas_Pitch.a1 = 0.5;
+	ESOParas_Pitch.a2 = 0.25;
+	ESOParas_Pitch.d = 0.01;
 
 	ESOState_Pitch.z1 = 0;
 	ESOState_Pitch.z2 = 0;
@@ -491,20 +491,20 @@ static void ESO_Init(void)
 
 static void NLSEF_Init(void)
 {
-	NLSEFState_Roll.b1 = 30;		//17.6
-	NLSEFState_Roll.b2 = 10;		//10;
-	NLSEFState_Roll.b = 6.1;			//10
-	NLSEFState_Roll.a1 = 0.6;
-	NLSEFState_Roll.a2 = 1.5;		//0.9
-	NLSEFState_Roll.d = 0.1;			//0.02
+	NLSEFState_Roll.b1 = 30;	//17.6
+	NLSEFState_Roll.b2 = 10;	//30;
+	NLSEFState_Roll.b = 0.1;		//6.1
+	NLSEFState_Roll.a1 = 0.5;
+	NLSEFState_Roll.a2 = 1.5;
+	NLSEFState_Roll.d = 0.01;
 	NLSEFState_Roll.u = 0;
 
-	NLSEFState_Pitch.b1 = 30;		//17.6
-	NLSEFState_Pitch.b2 = 10;		//10;
-	NLSEFState_Pitch.b = 6.1;			//10
-	NLSEFState_Pitch.a1 = 0.6;
+	NLSEFState_Pitch.b1 = 30;
+	NLSEFState_Pitch.b2 = 10;
+	NLSEFState_Pitch.b = 0.1;
+	NLSEFState_Pitch.a1 = 0.5;
 	NLSEFState_Pitch.a2 = 1.5;		//0.9
-	NLSEFState_Pitch.d = 0.1;			//0.02
+	NLSEFState_Pitch.d = 0.01;			//0.02
 	NLSEFState_Pitch.u = 0;
 }
 
