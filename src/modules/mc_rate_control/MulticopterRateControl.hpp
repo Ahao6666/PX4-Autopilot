@@ -180,95 +180,95 @@ private:
 
 };
 
+typedef struct _fal
+{
+	float a1;
+	float a2;
+	float s1;
+	float s2;
+}fal_TypeDef;
 
-/*****	 fhan	 ******
-@parameters: r--velocity coefficient
-			 c--filter coefficient
-*/
 typedef struct _fhanparas
 {
 	float r;
-	float h;
+	float c;
 }fhanParas_TypeDef;
 
 
 /******  TD  ******
-@parameters: x1--The amount of trace
-			 x2--the amount of trace velocity
+@parameters: x1 ¡ª¡ª žú×ÙµÄÁ¿
+						 x2 ¡ª¡ª žú×ÙµÄËÙ¶ÈÁ¿
 */
 typedef struct _tdstate
 {
-	float h;
 	float x1;
 	float x2;
 }TDState_TypeDef;
 
 
 /******  ESOPara  ******
-@parameters: b1/b2/b3--observer gain
-			b--gain about control value to angular velocity
-			c--filter coefficient
-			a1--position feedback gain
-			a2--velocity feedback gain
+@parameters: b1¡¢b2¡¢b3 ¡ª¡ª ¹Û²âÆ÷ÔöÒæ
+						 b ¡ª¡ª ¿ØÖÆÁ¿¶ÔÓŠÓÚœÇŒÓËÙ¶ÈÁ¿µÄÔöÒæ
+						 c ¡ª¡ª ÂË²šÒò×Ó
+						 a1 ¡ª¡ª Î»ÖÃ·ŽÀ¡fal£š£©ÖžÊý²ÎÊý
+						 a2 ¡ª¡ª ËÙ¶È·ŽÀ¡fal£š£©ÖžÊý²ÎÊý
 */
 typedef struct _esoparas
 {
-	float h;
-	float b;
 	float b1;
 	float b2;
 	float b3;
-	float a1;
-	float a2;
-	float d;
+	float b;
+	float c;
 }ESOParas_TypeDef;
 
 /******  ESOState  ******
-@parameters: z1,z2,z3--observed position velocity acceleration from observer
+@parameters: z1¡¢z2¡¢z3 ¡ª¡ª ¹Û²âÆ÷¹Û²âµÄÎ»ÖÃ¡¢ËÙ¶È¡¢ŒÓËÙ¶ÈÁ¿
 
 */
 typedef struct _esostate
 {
-	unsigned int ch;
 	float z1;
 	float z2;
 	float z3;
 }ESOState_TypeDef;
 
+/******  NLSEF  ******
+@parameters: b1 ¡ª¡ª Î»ÖÃÎó²î·ŽÀ¡ÔöÒæ
+						 b2 ¡ª¡ª ËÙ¶ÈÎó²î·ŽÀ¡ÔöÒæ
+						 b  ¡ª¡ª ¿ØÖÆÁ¿¶ÔÓŠÓÚœÇŒÓËÙ¶ÈÁ¿µÄÔöÒæ
+						 c  ¡ª¡ª Æ«²îÔöÒæ
+						 a1 ¡ª¡ª ±ÈÀý·ŽÀ¡fal£š£©ÖžÊý²ÎÊý
+						 a2 ¡ª¡ª Î¢·Ö·ŽÀ¡fal£š£©ÖžÊý²ÎÊý
+						 u  ¡ª¡ª Êä³öµÄ¿ØÖÆÁ¿
+*/
 typedef struct _nlsefpara
 {
 	float b1;
 	float b2;
 	float b;
-	float a1;
-	float a2;
-	float d;
+	float c;
 	float u;
 }NLSEFState_TypeDef;
+
 
 /* TD */
 extern fhanParas_TypeDef TD_fhanParas_RollRadio;
 extern fhanParas_TypeDef TD_fhanParas_PitchRadio;
-extern fhanParas_TypeDef TD_fhanParas_YawRadio;
 
 extern TDState_TypeDef TDState_RollRadio;
 extern TDState_TypeDef TDState_PitchRadio;
-extern TDState_TypeDef TDState_YawRadio;
-
 /* ESO */
 
 extern ESOParas_TypeDef ESOParas_Roll;
 extern ESOParas_TypeDef ESOParas_Pitch;
-extern ESOParas_TypeDef ESOParas_Yaw;
 
 extern ESOState_TypeDef ESOState_Roll;
 extern ESOState_TypeDef ESOState_Pitch;
-extern ESOState_TypeDef ESOState_Yaw;
 
 /* NLSEF */
 extern NLSEFState_TypeDef NLSEFState_Roll;
 extern NLSEFState_TypeDef NLSEFState_Pitch;
-extern NLSEFState_TypeDef NLSEFState_Yaw;
 
 void ADRC_Init(void);
 void TD_Atti(TDState_TypeDef *state,float v,fhanParas_TypeDef *para);
